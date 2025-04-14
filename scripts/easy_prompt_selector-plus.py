@@ -3,7 +3,6 @@ Easy Prompt Selector Plus のメインスクリプト
 プロンプトのテンプレート処理とタグ管理を行う
 """
 
-from pathlib import Path
 import random
 import re
 import yaml
@@ -11,28 +10,22 @@ import gradio as gr
 import traceback
 
 import modules.scripts as scripts
-from modules.scripts import AlwaysVisible, basedir
+from modules.scripts import AlwaysVisible
 from modules import shared
 from scripts.setup import write_filename_list
+from scripts.setup import get_tag_files
 
-# ディレクトリパスの定義
-FILE_DIR = Path().absolute()  # 現在のディレクトリ
-BASE_DIR = Path(basedir())    # ベースディレクトリ
-TAGS_DIR = BASE_DIR.joinpath('tags')  # タグファイルディレクトリ
+# デバッグモードの設定
+DEBUG = false
 
-def tag_files():
+def debug_print(message):
     """
-    タグファイルのパスを取得
-    Returns:
-        Generator: タグファイルのパス
+    デバッグメッセージを出力
+    Args:
+        message (str): 出力するメッセージ
     """
-    print(f"TAGS_DIR:{TAGS_DIR}")
-    try:
-        return TAGS_DIR.rglob("*.yml")
-    except Exception as e:
-        print(f"タグファイルの取得中にエラーが発生しました: {str(e)}")
-        print(traceback.format_exc())
-        return []
+    if DEBUG:
+        print(f"[DEBUG] {message}")
 
 def load_tags():
     """
@@ -42,7 +35,8 @@ def load_tags():
     """
     tags = {}
     try:
-        for filepath in tag_files():
+        debug_print("タグファイルの読み込みを開始します")
+        for filepath in get_tag_files():
             try:
                 with open(filepath, "r", encoding="utf-8") as file:
                     yml = yaml.safe_load(file)
@@ -50,10 +44,14 @@ def load_tags():
                         print(f"警告: {filepath} は空のファイルです")
                         continue
                     tags[filepath.stem] = yml
+                    debug_print(f"タグファイルを読み込みました: {filepath}")
             except yaml.YAMLError as e:
                 print(f"YAML解析エラー ({filepath}): {str(e)}")
+                print(traceback.format_exc())
             except Exception as e:
                 print(f"ファイル読み込みエラー ({filepath}): {str(e)}")
+                print(traceback.format_exc())
+        debug_print(f"タグファイルの読み込みが完了しました: {len(tags)}ファイル")
     except Exception as e:
         print(f"タグ読み込み中にエラーが発生しました: {str(e)}")
         print(traceback.format_exc())
@@ -66,9 +64,10 @@ def find_tag(tags, location):
         tags (dict): タグデータ
         location (str or list): タグの位置
     Returns:
-        str: 見つかったタグの値
+        str: 見つかったタグ
     """
     try:
+        debug_print(f"タグの検索を開始します: {location}")
         if type(location) == str:
             return tags[location]
 
@@ -89,9 +88,11 @@ def find_tag(tags, location):
         if (type(value) == list):
             value = random.choice(value)
 
+        debug_print(f"タグを検索しました: {value}")
         return value
     except Exception as e:
-        print(f"タグ検索中にエラーが発生しました (location: {location}): {str(e)}")
+        print(f"タグ検索中にエラーが発生しました: {str(e)}")
+        print(traceback.format_exc())
         return ""
 
 def replace_template(tags, prompt, seed = None):
@@ -105,6 +106,7 @@ def replace_template(tags, prompt, seed = None):
         str: 置換後のプロンプト
     """
     try:
+        debug_print("テンプレートの置換を開始します")
         random.seed(seed)
 
         count = 0
@@ -126,14 +128,14 @@ def replace_template(tags, prompt, seed = None):
                     values = list(map(lambda x: find_tag(tags, match.group('ref').split(':')), list(range(count))))
                     prompt = prompt.replace(template, ', '.join(values), 1)
                 except Exception as e:
-                    print(f"テンプレート置換中にエラーが発生しました (template: {template}): {str(e)}")
-                    prompt = prompt.replace(template, '', 1)
-            count += 1
+                    print(f"テンプレート置換中にエラーが発生しました: {str(e)}")
+                    print(traceback.format_exc())
+                    prompt = prompt.replace(template, "", 1)
 
-        random.seed()
+        debug_print("テンプレートの置換が完了しました")
         return prompt
     except Exception as e:
-        print(f"プロンプト置換中にエラーが発生しました: {str(e)}")
+        print(f"テンプレート置換中にエラーが発生しました: {str(e)}")
         print(traceback.format_exc())
         return prompt
 
@@ -141,31 +143,29 @@ class Script(scripts.Script):
     """
     Easy Prompt Selector Plus のメインスクリプトクラス
     """
-    tags = {}
-
     def __init__(self):
         """
         初期化処理
         """
         try:
-            super().__init__()
+            debug_print("スクリプトの初期化を開始します")
             self.tags = load_tags()
+            debug_print("スクリプトの初期化が完了しました")
         except Exception as e:
             print(f"スクリプト初期化中にエラーが発生しました: {str(e)}")
             print(traceback.format_exc())
-            self.tags = {}
 
     def title(self):
         """
-        スクリプトのタイトルを返す
+        スクリプトのタイトルを取得
         Returns:
             str: スクリプトのタイトル
         """
-        return "EasyPromptSelector"
+        return "Easy Prompt Selector Plus"
 
     def show(self, is_img2img):
         """
-        スクリプトの表示設定
+        スクリプトの表示設定を取得
         Args:
             is_img2img (bool): img2imgモードかどうか
         Returns:
@@ -182,26 +182,30 @@ class Script(scripts.Script):
             list: UI要素のリスト
         """
         try:
+            debug_print("UIの構築を開始します")
             if (is_img2img):
                 return None
 
             # リロードボタンの作成
             reload_button = gr.Button('🔄', variant='secondary', elem_id='easy_prompt_selector_reload_button')
-            reload_button.style(size='sm')
+            reload_button.scale = 0.5  # ボタンのサイズを小さくする
 
             def reload():
                 """
                 タグの再読み込み
                 """
                 try:
+                    debug_print("タグの再読み込みを開始します")
                     self.tags = load_tags()
                     write_filename_list()
+                    debug_print("タグの再読み込みが完了しました")
                 except Exception as e:
                     print(f"タグ再読み込み中にエラーが発生しました: {str(e)}")
                     print(traceback.format_exc())
 
             reload_button.click(fn=reload)
 
+            debug_print("UIの構築が完了しました")
             return [reload_button]
         except Exception as e:
             print(f"UI構築中にエラーが発生しました: {str(e)}")
@@ -215,6 +219,7 @@ class Script(scripts.Script):
             p: プロンプトパラメータ
         """
         try:
+            debug_print("テンプレートタグの置換を開始します")
             prompts = [
                 [p.prompt, p.all_prompts, 'Input Prompt'],
                 [p.negative_prompt, p.all_negative_prompts, 'Input NegativePrompt'],
@@ -231,6 +236,7 @@ class Script(scripts.Script):
 
                     replaced = "".join(replace_template(self.tags, all_prompts[i], seed))
                     all_prompts[i] = replaced
+            debug_print("テンプレートタグの置換が完了しました")
         except Exception as e:
             print(f"テンプレートタグ置換中にエラーが発生しました: {str(e)}")
             print(traceback.format_exc())
@@ -248,6 +254,7 @@ class Script(scripts.Script):
                 return
 
             p.extra_generation_params.update({name: prompt.replace('\n', ' ')})
+            debug_print(f"PNG情報にプロンプトを保存しました: {name}")
         except Exception as e:
             print(f"PNG情報保存中にエラーが発生しました: {str(e)}")
             print(traceback.format_exc())
@@ -260,7 +267,9 @@ class Script(scripts.Script):
             *args: その他の引数
         """
         try:
+            debug_print("プロンプトの処理を開始します")
             self.replace_template_tags(p)
+            debug_print("プロンプトの処理が完了しました")
         except Exception as e:
             print(f"プロンプト処理中にエラーが発生しました: {str(e)}")
             print(traceback.format_exc())

@@ -2,6 +2,19 @@
  * Easy Prompt Selector Plus - プロンプト選択を簡単にするためのユーティリティクラス
  */
 
+// デバッグモードの設定
+const DEBUG = false;
+
+/**
+ * デバッグメッセージを出力
+ * @param {string} message - 出力するメッセージ
+ */
+function debugPrint(message) {
+    if (DEBUG) {
+        console.log(`[DEBUG] ${message}`);
+    }
+}
+
 /**
  * UI要素を構築するためのユーティリティクラス
  */
@@ -15,20 +28,26 @@ class EPSElementBuilder {
    * @returns {HTMLElement} 作成されたボタン要素
    */
   static baseButton(text, { size = 'sm', color = 'primary' }) {
-    const button = gradioApp().getElementById('txt2img_generate').cloneNode()
-    button.id = ''
-    button.classList.remove('gr-button-lg', 'gr-button-primary', 'lg', 'primary')
-    button.classList.add(
-      // gradio 3.16
-      `gr-button-${size}`,
-      `gr-button-${color}`,
-      // gradio 3.22
-      size,
-      color
-    )
-    button.textContent = text
-
-    return button
+    try {
+      debugPrint(`ボタン要素を作成します: ${text}`);
+      const button = gradioApp().getElementById('txt2img_generate').cloneNode()
+      button.id = ''
+      button.classList.remove('gr-button-lg', 'gr-button-primary', 'lg', 'primary')
+      button.classList.add(
+        // gradio 3.16
+        `gr-button-${size}`,
+        `gr-button-${color}`,
+        // gradio 3.22
+        size,
+        color
+      )
+      button.textContent = text
+      debugPrint(`ボタン要素を作成しました: ${text}`);
+      return button
+    } catch (error) {
+      console.error(`ボタン要素の作成中にエラーが発生しました: ${error.message}`);
+      return null;
+    }
   }
 
   /**
@@ -72,12 +91,18 @@ class EPSElementBuilder {
    * @returns {HTMLElement} 作成されたコンテナ要素
    */
   static areaContainer(id = undefined) {
-    const container = gradioApp().getElementById('txt2img_results').cloneNode()
-    container.id = id
-    container.style.gap = 0
-    container.style.display = 'none'
-
-    return container
+    try {
+      debugPrint(`コンテナ要素を作成します: ${id}`);
+      const container = gradioApp().getElementById('txt2img_results').cloneNode()
+      container.id = id
+      container.style.gap = 0
+      container.style.display = 'none'
+      debugPrint(`コンテナ要素を作成しました: ${id}`);
+      return container
+    } catch (error) {
+      console.error(`コンテナ要素の作成中にエラーが発生しました: ${error.message}`);
+      return null;
+    }
   }
 
   /**
@@ -169,7 +194,7 @@ class EPSElementBuilder {
  */
 class EasyPromptSelector {
   // 定数定義
-  PATH_FILE = 'tmp/easyPromptSelector.txt'  // 設定ファイルのパス
+  PATH_FILE = 'tmp/easyPromptSelectorPlus.txt'  // 設定ファイルのパス
   AREA_ID = 'easy-prompt-selector'          // メインエリアのID
   SELECT_ID = 'easy-prompt-selector-select' // セレクトボックスのID
   CONTENT_ID = 'easy-prompt-selector-content' // コンテンツエリアのID
@@ -192,18 +217,24 @@ class EasyPromptSelector {
    * 初期化処理
    */
   async init() {
-    this.tags = await this.parseFiles()
+    try {
+      debugPrint('初期化処理を開始します');
+      this.tags = await this.parseFiles()
 
-    const tagArea = gradioApp().querySelector(`#${this.AREA_ID}`)
-    if (tagArea != null) {
-      this.visible = false
-      this.changeVisibility(tagArea, this.visible)
-      tagArea.remove()
+      const tagArea = gradioApp().querySelector(`#${this.AREA_ID}`)
+      if (tagArea != null) {
+        this.visible = false
+        this.changeVisibility(tagArea, this.visible)
+        tagArea.remove()
+      }
+
+      gradioApp()
+        .getElementById('txt2img_toprow')
+        .after(this.render())
+      debugPrint('初期化処理が完了しました');
+    } catch (error) {
+      console.error(`初期化処理中にエラーが発生しました: ${error.message}`);
     }
-
-    gradioApp()
-      .getElementById('txt2img_toprow')
-      .after(this.render())
   }
 
   /**
@@ -212,9 +243,19 @@ class EasyPromptSelector {
    * @returns {Promise<string>} ファイルの内容
    */
   async readFile(filepath) {
-    const response = await fetch(`file=${filepath}?${new Date().getTime()}`);
-
-    return await response.text();
+    try {
+      debugPrint(`ファイルを読み込みます: ${filepath}`);
+      const response = await fetch(`file=${filepath}?${new Date().getTime()}`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const text = await response.text();
+      debugPrint(`ファイルを読み込みました: ${filepath}`);
+      return text;
+    } catch (error) {
+      console.error(`ファイル読み込み中にエラーが発生しました (${filepath}): ${error.message}`);
+      return '';
+    }
   }
 
   /**
@@ -222,21 +263,36 @@ class EasyPromptSelector {
    * @returns {Promise<Object>} 解析されたタグデータ
    */
   async parseFiles() {
-    const text = await this.readFile(this.PATH_FILE);
-    if (text === '') { return {} }
+    try {
+      debugPrint('設定ファイルの解析を開始します');
+      const text = await this.readFile(this.PATH_FILE);
+      if (text === '') {
+        debugPrint('設定ファイルが空です');
+        return {};
+      }
 
-    const paths = text.split(/\r\n|\n/)
+      const paths = text.split(/\r\n|\n/);
+      const tags = {};
 
-    const tags = {}
-    for (const path of paths) {
-      const filename = path.split('/').pop().split('.').slice(0, -1).join('.')
-      const data = await this.readFile(path)
-      yaml.loadAll(data, function (doc) {
-        tags[filename] = doc
-      })
+      for (const path of paths) {
+        try {
+          const filename = path.split('/').pop().split('.').slice(0, -1).join('.');
+          const data = await this.readFile(path);
+          this.yaml.loadAll(data, function (doc) {
+            tags[filename] = doc;
+          });
+          debugPrint(`タグファイルを解析しました: ${filename}`);
+        } catch (error) {
+          console.error(`タグファイルの解析中にエラーが発生しました (${path}): ${error.message}`);
+        }
+      }
+
+      debugPrint(`設定ファイルの解析が完了しました: ${Object.keys(tags).length}ファイル`);
+      return tags;
+    } catch (error) {
+      console.error(`設定ファイルの解析中にエラーが発生しました: ${error.message}`);
+      return {};
     }
-
-    return tags
   }
 
   /**
@@ -419,28 +475,34 @@ class EasyPromptSelector {
 }
 
 onUiLoaded(async () => {
-  yaml = window.jsyaml
-  const easyPromptSelector = new EasyPromptSelector(yaml, gradioApp())
+  try {
+    debugPrint('UIの読み込みが完了しました');
+    yaml = window.jsyaml
+    const easyPromptSelector = new EasyPromptSelector(yaml, gradioApp())
 
-  const button = EPSElementBuilder.openButton({
-    onClick: () => {
-      const tagArea = gradioApp().querySelector(`#${easyPromptSelector.AREA_ID}`)
-      easyPromptSelector.changeVisibility(tagArea, easyPromptSelector.visible = !easyPromptSelector.visible)
-    }
-  })
+    const button = EPSElementBuilder.openButton({
+      onClick: () => {
+        const tagArea = gradioApp().querySelector(`#${easyPromptSelector.AREA_ID}`)
+        easyPromptSelector.changeVisibility(tagArea, easyPromptSelector.visible = !easyPromptSelector.visible)
+      }
+    })
 
-  const reloadButton = gradioApp().getElementById('easy_prompt_selector_reload_button')
-  reloadButton.addEventListener('click', async () => {
+    const reloadButton = gradioApp().getElementById('easy_prompt_selector_reload_button')
+    reloadButton.addEventListener('click', async () => {
+      await easyPromptSelector.init()
+    })
+
+    const txt2imgActionColumn = gradioApp().getElementById('txt2img_actions_column')
+    const container = document.createElement('div')
+    container.classList.add('easy_prompt_selector_container')
+    container.appendChild(button)
+    container.appendChild(reloadButton)
+
+    txt2imgActionColumn.appendChild(container)
+
     await easyPromptSelector.init()
-  })
-
-  const txt2imgActionColumn = gradioApp().getElementById('txt2img_actions_column')
-  const container = document.createElement('div')
-  container.classList.add('easy_prompt_selector_container')
-  container.appendChild(button)
-  container.appendChild(reloadButton)
-
-  txt2imgActionColumn.appendChild(container)
-
-  await easyPromptSelector.init()
+    debugPrint('初期化が完了しました');
+  } catch (error) {
+    console.error(`UIの初期化中にエラーが発生しました: ${error.message}`);
+  }
 })
