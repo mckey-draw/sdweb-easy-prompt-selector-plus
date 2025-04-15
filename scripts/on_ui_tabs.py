@@ -210,9 +210,7 @@ def on_ui_tabs():
         return [(ui_component, "Easy Prompt Selector", "easy_propmt_selector_tab")]
 
 # 作成したコンポーネントをwebuiに登録
-script_callbacks.on_ui_tabs(on_ui_tabs)
 try:
-    # UI_TABSのコールバックを登録
     script_callbacks.on_ui_tabs(on_ui_tabs)
 except Exception as e:
     print(f"UI設定コールバックの登録中にエラーが発生しました: {str(e)}")

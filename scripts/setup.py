@@ -80,7 +80,7 @@ def get_tags_dir():
     try:
         opt_dir = Path(shared.opts.eps_tags_dir)
         tags_dir = opt_dir if opt_dir != Path("") else DEF_TAGS_DIR
-        print(f"eps_tags_dir: {tags_dir}")
+        debug_print(f"eps_tags_dir: {tags_dir}")
         return tags_dir
     except Exception as e:
         print(f"タグディレクトリの取得中にエラーが発生しました: {str(e)}")

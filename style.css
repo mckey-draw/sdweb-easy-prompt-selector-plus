@@ -1,7 +1,7 @@
 /* Easy Prompt Selector Plus のスタイル定義 */
 
 /* タグ選択コンテナのスタイル */
-.easy_prompt_selector_container {
+.easy_prompt_selector_plus_container {
   display: flex;
   flex-direction: row;
   gap: 0.5em;
@@ -9,6 +9,6 @@
 }
 
 /* タグ選択ボタンのスタイル */
-.easy_prompt_selector_button {
+.easy_prompt_selector_plus_button {
   flex: 1;
 }

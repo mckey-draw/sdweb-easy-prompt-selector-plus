@@ -176,7 +176,7 @@ class Script(scripts.Script):
                 return None
 
             # リロードボタンの作成
-            reload_button = gr.Button('🔄', variant='secondary', elem_id='easy_prompt_selector_reload_button')
+            reload_button = gr.Button('🔄', variant='secondary', elem_id='easy_prompt_selector_plus_reload_button')
             reload_button.scale = 0.5  # ボタンのサイズを小さくする
 
             def reload():
