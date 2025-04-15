@@ -16,7 +16,7 @@ from scripts.setup import write_filename_list
 from scripts.setup import get_tag_files
 
 # デバッグモードの設定
-DEBUG = false
+DEBUG = False
 
 def debug_print(message):
     """

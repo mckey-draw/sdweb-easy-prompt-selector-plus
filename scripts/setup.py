@@ -12,7 +12,7 @@ from modules import scripts
 from modules import shared
 
 # デバッグモードの設定
-DEBUG = false
+DEBUG = False
 
 def debug_print(message):
     """
