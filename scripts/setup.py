@@ -24,9 +24,8 @@ def debug_print(message):
         print(f"[DEBUG] {message}")
 
 # ディレクトリパスの定義
-FILE_DIR = Path().absolute()  # 現在のディレクトリ
 BASE_DIR = Path(scripts.basedir())  # ベースディレクトリ
-TEMP_DIR = FILE_DIR.joinpath('tmp')  # 一時ファイルディレクトリ
+TEMP_DIR = Path().joinpath('tmp')  # 一時ファイルディレクトリ
 
 # タグ関連のディレクトリ
 DEF_TAGS_DIR = BASE_DIR.joinpath('tags')  # デフォルトタグファイルディレクトリ
@@ -119,7 +118,15 @@ def write_filename_list():
     """
     try:
         debug_print("ファイルリストの書き出しを開始します")
-        filepaths = map(lambda path: path.relative_to(FILE_DIR).as_posix(), list(get_tag_files()))
+        filepaths = []
+        for path in get_tag_files():
+            try:
+                # 相対パスに変換
+                rel_path = path.relative_to(get_tags_dir())
+                filepaths.append(rel_path.as_posix())
+            except ValueError as e:
+                print(f"パス変換中にエラーが発生しました ({path}): {str(e)}")
+                continue
 
         with open(TEMP_DIR.joinpath(FILENAME_LIST), 'w', encoding="utf-8") as f:
             f.write('\n'.join(sorted(filepaths)))
