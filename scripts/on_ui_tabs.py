@@ -117,97 +117,95 @@ def on_ui_tabs():
                 interactive=True
             )
 
-            # 保存ボタン
-            save_button = gr.Button("保存", variant="primary")
+            # 保存ボタンと新規作成ボタンを同じ行に配置
+            save_button = gr.Button("保存", variant="primary", size="sm")
+            new_button = gr.Button("新規作成", variant="secondary", size="sm")
 
-            # 新規作成ボタン
-            new_button = gr.Button("新規作成", variant="secondary")
+        # タグファイルの内容を表示するテキストボックスを新しい行に配置
+        tag_content = gr.Textbox(
+            label="タグファイルの内容",
+            lines=20,
+            interactive=True
+        )
 
-            # タグファイルの内容を表示するテキストボックス
-            tag_content = gr.Textbox(
-                label="タグファイルの内容",
-                lines=20,
+        # 新規作成用のモーダルウィンドウ
+        with gr.Modal(title="新しいタグファイルの作成", visible=False) as modal:
+            new_file_name = gr.Textbox(
+                label="新しいタグファイル名",
+                placeholder="ファイル名を入力してください",
                 interactive=True
             )
-
-            # 新規作成用のモーダルウィンドウ
-            with gr.Column(visible=False) as modal:
-                new_file_name = gr.Textbox(
-                    label="新しいタグファイル名",
-                    placeholder="ファイル名を入力してください",
-                    interactive=True
-                )
-                with gr.Row():
-                    cancel_button = gr.Button("Cancel", variant="secondary")
-                    ok_button = gr.Button("OK", variant="primary")
-                modal_result = gr.Textbox(
-                    label="結果",
-                    interactive=False,
-                    visible=False
-                )
-
-            # ドロップダウンの選択変更時にテキストボックスの内容を更新
-            tag_dropdown.change(
-                fn=load_tag_file_content,
-                inputs=[tag_dropdown],
-                outputs=[tag_content]
+            with gr.Row():
+                cancel_button = gr.Button("キャンセル", variant="secondary")
+                ok_button = gr.Button("OK", variant="primary")
+            modal_result = gr.Textbox(
+                label="結果",
+                interactive=False,
+                visible=False
             )
 
-            # 保存ボタンクリック時にファイルを保存
-            def save_with_validation(tag_file_name, content):
-                is_valid, error_message = validate_yaml(content)
-                if not is_valid:
-                    gr.Info(f"YAML形式が正しくありません: {error_message}")
-                    return
-                
-                result = save_tag_file_content(tag_file_name, content)
-                if result == "保存しました":
-                    gr.Info("保存が完了しました")
-                else:
-                    gr.Info(f"保存に失敗しました: {result}")
+        # ドロップダウンの選択変更時にテキストボックスの内容を更新
+        tag_dropdown.change(
+            fn=load_tag_file_content,
+            inputs=[tag_dropdown],
+            outputs=[tag_content]
+        )
 
-            save_button.click(
-                fn=save_with_validation,
-                inputs=[tag_dropdown, tag_content],
-                outputs=[]
-            )
+        # 保存ボタンクリック時にファイルを保存
+        def save_with_validation(tag_file_name, content):
+            is_valid, error_message = validate_yaml(content)
+            if not is_valid:
+                gr.Info(f"YAML形式が正しくありません: {error_message}")
+                return
+            
+            result = save_tag_file_content(tag_file_name, content)
+            if result == "保存しました":
+                gr.Info("保存が完了しました")
+            else:
+                gr.Info(f"保存に失敗しました: {result}")
 
-            # 新規作成ボタンクリック時にモーダルを表示
-            def show_modal():
-                return gr.update(visible=True)
-            new_button.click(
-                fn=show_modal,
-                outputs=[modal]
-            )
+        save_button.click(
+            fn=save_with_validation,
+            inputs=[tag_dropdown, tag_content],
+            outputs=[]
+        )
 
-            # Cancelボタンクリック時にモーダルを非表示
-            def hide_modal():
-                return gr.update(visible=False)
-            cancel_button.click(
-                fn=hide_modal,
-                outputs=[modal]
-            )
+        # 新規作成ボタンクリック時にモーダルを表示
+        def show_modal():
+            return gr.update(visible=True)
+        new_button.click(
+            fn=show_modal,
+            outputs=[modal]
+        )
 
-            # OKボタンクリック時にファイルを作成
-            def create_file(file_name):
-                result, new_tag_files = create_new_tag_file(file_name)
-                if new_tag_files is not None:
-                    return {
-                        modal: gr.update(visible=False),
-                        tag_dropdown: gr.update(choices=new_tag_files, value=file_name),
-                        modal_result: result
-                    }
+        # キャンセルボタンクリック時にモーダルを非表示
+        def hide_modal():
+            return gr.update(visible=False)
+        cancel_button.click(
+            fn=hide_modal,
+            outputs=[modal]
+        )
+
+        # OKボタンクリック時にファイルを作成
+        def create_file(file_name):
+            result, new_tag_files = create_new_tag_file(file_name)
+            if new_tag_files is not None:
                 return {
-                    modal: gr.update(visible=True),
+                    modal: gr.update(visible=False),
+                    tag_dropdown: gr.update(choices=new_tag_files, value=file_name),
                     modal_result: result
                 }
-            ok_button.click(
-                fn=create_file,
-                inputs=[new_file_name],
-                outputs=[modal, tag_dropdown, modal_result]
-            )
+            return {
+                modal: gr.update(visible=True),
+                modal_result: result
+            }
+        ok_button.click(
+            fn=create_file,
+            inputs=[new_file_name],
+            outputs=[modal, tag_dropdown, modal_result]
+        )
 
-        return [(ui_component, "Easy Prompt Selector", "easy_propmt_selector_tab")]
+    return [(ui_component, "Easy Prompt Selector", "easy_propmt_selector_tab")]
 
 # 作成したコンポーネントをwebuiに登録
 try:
