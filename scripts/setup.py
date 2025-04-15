@@ -121,9 +121,8 @@ def write_filename_list():
         filepaths = []
         for path in get_tag_files():
             try:
-                # 相対パスに変換
-                rel_path = path.relative_to(get_tags_dir())
-                filepaths.append(rel_path.as_posix())
+                # フルパスを使用
+                filepaths.append(str(path))
             except ValueError as e:
                 print(f"パス変換中にエラーが発生しました ({path}): {str(e)}")
                 continue
