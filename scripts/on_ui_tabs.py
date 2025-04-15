@@ -109,7 +109,14 @@ def on_ui_tabs():
 
         with gr.Row():
             # タグファイルのドロップダウンを作成
-            tag_files = [str(file.stem) for file in get_tag_files()]
+            tag_files = []
+            for file in get_tag_files():
+                # タグディレクトリからの相対パスを取得
+                rel_path = file.relative_to(get_tags_dir())
+                # サブディレクトリ名を含めた表示名を作成
+                display_name = str(rel_path.parent / rel_path.stem) if rel_path.parent != Path('.') else rel_path.stem
+                tag_files.append((display_name, str(file.stem)))
+            
             tag_dropdown = gr.Dropdown(
                 choices=tag_files,
                 label="タグファイル選択",
@@ -129,12 +136,20 @@ def on_ui_tabs():
         )
 
         # 新規作成用のモーダルウィンドウ
-        with gr.Modal(title="新しいタグファイルの作成", visible=False) as modal:
-            new_file_name = gr.Textbox(
-                label="新しいタグファイル名",
-                placeholder="ファイル名を入力してください",
-                interactive=True
-            )
+        with gr.Column(visible=False) as modal:
+            gr.Markdown("### 新しいタグファイルの作成")
+            with gr.Row():
+                new_file_dir = gr.Textbox(
+                    label="サブディレクトリ名（オプション）",
+                    placeholder="",
+                    interactive=True
+                )
+            with gr.Row():
+                new_file_name = gr.Textbox(
+                    label="新しいタグファイル名",
+                    placeholder="ファイル名を入力してください",
+                    interactive=True
+                )
             with gr.Row():
                 cancel_button = gr.Button("キャンセル", variant="secondary")
                 ok_button = gr.Button("OK", variant="primary")
@@ -187,21 +202,52 @@ def on_ui_tabs():
         )
 
         # OKボタンクリック時にファイルを作成
-        def create_file(file_name):
-            result, new_tag_files = create_new_tag_file(file_name)
-            if new_tag_files is not None:
+        def create_file(dir_name, file_name):
+            try:
+                # サブディレクトリのパスを作成
+                if dir_name:
+                    dir_path = get_tags_dir() / dir_name
+                    dir_path.mkdir(parents=True, exist_ok=True)
+                    new_file = dir_path / f"{file_name}.yml"
+                else:
+                    new_file = get_tags_dir() / f"{file_name}.yml"
+
+                # ファイル名の重複チェック
+                if new_file.exists():
+                    return {
+                        modal: gr.update(visible=True),
+                        modal_result: "同じ名前のファイルが既に存在します"
+                    }
+
+                # 新しいファイルを作成
+                with open(new_file, "w", encoding="utf-8") as f:
+                    f.write("")
+
+                # 更新されたタグファイルリストを取得
+                tag_files = []
+                for file in get_tag_files():
+                    rel_path = file.relative_to(get_tags_dir())
+                    display_name = str(rel_path.parent / rel_path.stem) if rel_path.parent != Path('.') else rel_path.stem
+                    tag_files.append((display_name, str(file.stem)))
+
                 return {
                     modal: gr.update(visible=False),
-                    tag_dropdown: gr.update(choices=new_tag_files, value=file_name),
-                    modal_result: result
+                    tag_dropdown: gr.update(choices=tag_files, value=file_name),
+                    modal_result: "ファイルを作成しました"
                 }
-            return {
-                modal: gr.update(visible=True),
-                modal_result: result
-            }
+            except Exception as e:
+                error_msg = f"タグファイルの作成中にエラーが発生しました: {str(e)}"
+                if config["debug"]["enabled"]:
+                    print(error_msg)
+                    print(traceback.format_exc())
+                return {
+                    modal: gr.update(visible=True),
+                    modal_result: error_msg
+                }
+
         ok_button.click(
             fn=create_file,
-            inputs=[new_file_name],
+            inputs=[new_file_dir, new_file_name],
             outputs=[modal, tag_dropdown, modal_result]
         )
 
