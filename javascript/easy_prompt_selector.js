@@ -2,16 +2,22 @@
  * Easy Prompt Selector Plus - プロンプト選択を簡単にするためのユーティリティクラス
  */
 
-// デバッグモードの設定
-const DEBUG = false;
+// デバッグ設定の取得
+const DEBUG_CONFIG = window.EPS_DEBUG_CONFIG || {
+    enabled: false,
+    log_level: "INFO",
+    show_console: true
+};
 
 /**
  * デバッグメッセージを出力
  * @param {string} message - 出力するメッセージ
  */
 function debugPrint(message) {
-    if (DEBUG) {
-        console.log(`[DEBUG] ${message}`);
+    if (DEBUG_CONFIG.enabled) {
+        if (DEBUG_CONFIG.show_console) {
+            console.log(`[DEBUG] ${message}`);
+        }
     }
 }
 

@@ -10,18 +10,7 @@ import traceback
 
 from modules import scripts
 from modules import shared
-
-# デバッグモードの設定
-DEBUG = False
-
-def debug_print(message):
-    """
-    デバッグメッセージを出力
-    Args:
-        message (str): 出力するメッセージ
-    """
-    if DEBUG:
-        print(f"[DEBUG] {message}")
+from scripts.configs import config, debug_print
 
 # ディレクトリパスの定義
 BASE_DIR = Path(scripts.basedir())  # ベースディレクトリ

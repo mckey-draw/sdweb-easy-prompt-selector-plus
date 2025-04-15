@@ -14,18 +14,7 @@ from modules.scripts import AlwaysVisible
 from modules import shared
 from scripts.setup import write_filename_list
 from scripts.setup import get_tag_files
-
-# デバッグモードの設定
-DEBUG = False
-
-def debug_print(message):
-    """
-    デバッグメッセージを出力
-    Args:
-        message (str): 出力するメッセージ
-    """
-    if DEBUG:
-        print(f"[DEBUG] {message}")
+from scripts.configs import config, debug_print
 
 def load_tags():
     """
