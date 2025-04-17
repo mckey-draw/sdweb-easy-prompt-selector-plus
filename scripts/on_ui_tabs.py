@@ -136,7 +136,7 @@ def on_ui_tabs():
         )
 
         # 新規作成用のモーダルウィンドウ
-        with gr.Column(visible=False) as modal:
+        with gr.Box(visible=False) as modal:
             gr.Markdown("### 新しいタグファイルの作成")
             with gr.Row():
                 new_file_dir = gr.Textbox(
